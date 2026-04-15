@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>simbridge</title>
+<style>
+html, body {
+  background: #000;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 4px;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  display: table;
+  width: 100%;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+td {
+  border: 1px solid #333;
+  padding: 4px 6px;
+  text-align: center;
+  vertical-align: middle;
+  background: #0a0a0a;
+}
+.lbl {
+  font-size: 10px;
+  color: #b0b0b0;
+  text-transform: uppercase;
+}
+.val {
+  font-size: 18px;
+  font-weight: bold;
+}
+.gear-cell {
+  font-size: 80px;
+  font-weight: bold;
+  width: 120px;
+  height: 100px;
+}
+.speed-cell {
+  font-size: 36px;
+  font-weight: bold;
+}
+.rpm-bar-outer {
+  width: 100%;
+  height: 14px;
+  background: #1a1a1a;
+  margin: 2px 0;
+}
+.rpm-bar-inner {
+  height: 100%;
+  width: 0%;
+  background: #22c55e;
+}
+.bot-lbl {
+  font-size: 9px;
+  color: #b0b0b0;
+}
+.bot-val {
+  font-size: 14px;
+  font-weight: bold;
+}
+.tc-color { color: #22c55e; }
+.abs-color { color: #3b82f6; }
+.fuel-color { color: #f59e0b; }
+.status-bar {
+  font-size: 9px;
+  color: #333;
+  text-align: right;
+  padding: 2px 4px 0 0;
+}
+.fs-btn {
+  position: fixed;
+  top: 4px;
+  right: 4px;
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 20px;
+  line-height: 36px;
+  text-align: center;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- RPM Bar -->
+<div class="rpm-bar-outer"><div class="rpm-bar-inner" id="rpmBar"></div></div>
+
+<!-- Main layout -->
+<table style="height:70%">
+  <tr>
+    <td style="width:35%">
+      <div class="lbl">Laptime</div>
+      <div class="val" id="laptime">--:--.--</div>
+    </td>
+    <td rowspan="2" style="width:30%">
+      <div class="speed-cell" id="speed">0</div>
+      <div class="lbl">km/h</div>
+      <div class="gear-cell" id="gear">N</div>
+    </td>
+    <td style="width:35%">
+      <div class="lbl">Last</div>
+      <div class="val" id="lastlap">--:--.--</div>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <div class="lbl">Lap</div>
+      <div class="val" id="lap">0</div>
+    </td>
+    <td>
+      <div class="lbl">Pos</div>
+      <div class="val" id="pos">--</div>
+    </td>
+  </tr>
+</table>
+
+<!-- Bottom info -->
+<table style="margin-top:3px">
+  <tr>
+    <td>
+      <div class="bot-lbl">TC</div>
+      <div class="bot-val tc-color" id="tc">0</div>
+    </td>
+    <td>
+      <div class="bot-lbl">ABS</div>
+      <div class="bot-val abs-color" id="abs">0</div>
+    </td>
+    <td>
+      <div class="bot-lbl">Fuel</div>
+      <div class="bot-val fuel-color" id="fuel">--</div>
+    </td>
+    <td>
+      <div class="bot-lbl">FL</div>
+      <div class="bot-val" id="tp-fl">--</div>
+    </td>
+    <td>
+      <div class="bot-lbl">FR</div>
+      <div class="bot-val" id="tp-fr">--</div>
+    </td>
+    <td>
+      <div class="bot-lbl">RL</div>
+      <div class="bot-val" id="tp-rl">--</div>
+    </td>
+    <td>
+      <div class="bot-lbl">RR</div>
+      <div class="bot-val" id="tp-rr">--</div>
+    </td>
+  </tr>
+</table>
+
+<div class="status-bar" id="status">--</div>
+<div class="fs-btn" id="fs-btn" title="Fullscreen">&#x26F6;</div>
+
+<script>
+function g(id) { return document.getElementById(id); }
+
+function fmt(s) {
+  if (s <= 0) return "--:--.--";
+  var m = Math.floor(s / 60);
+  var sec = s % 60;
+  var str = sec.toFixed(2);
+  if (str.length < 5) str = "0" + str;
+  return m + ":" + str;
+}
+
+function rpmColor(pct) {
+  if (pct > 0.92) return "#ef4444";
+  if (pct > 0.8) return "#eab308";
+  return "#22c55e";
+}
+
+function poll() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/api/telemetry", true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status !== 200) {
+      g("status").innerHTML = "error";
+      return;
+    }
+
+    var d;
+    try { d = JSON.parse(xhr.responseText); } catch(e) { return; }
+
+    if (!d.connected) {
+      g("status").innerHTML = "no signal";
+      return;
+    }
+    g("status").innerHTML = "live";
+    g("status").style.color = "#22c55e";
+
+    // Speed + Gear
+    g("speed").innerHTML = Math.round(d.speed_kmh);
+    g("gear").innerHTML = d.gear;
+    if (d.gear === "R") {
+      g("gear").style.color = "#ef4444";
+    } else if (d.gear === "N") {
+      g("gear").style.color = "#666";
+    } else {
+      g("gear").style.color = "#fff";
+    }
+
+    // RPM bar
+    var pct = d.max_rpm > 0 ? (d.rpm / d.max_rpm) : 0;
+    var bar = g("rpmBar");
+    bar.style.width = (pct * 100) + "%";
+    bar.style.background = rpmColor(pct);
+
+    // Laps
+    g("laptime").innerHTML = fmt(d.lap_time);
+    g("lastlap").innerHTML = fmt(d.last_lap_time);
+    g("lap").innerHTML = d.lap + (d.total_laps > 0 ? "/" + d.total_laps : "");
+    g("pos").innerHTML = d.position > 0 ? d.position : "--";
+
+    // Bottom
+    g("tc").innerHTML = d.tc > 0 ? d.tc.toFixed(0) : "0";
+    g("abs").innerHTML = d.abs > 0 ? d.abs.toFixed(0) : "0";
+    g("fuel").innerHTML = d.fuel > 0 ? d.fuel.toFixed(1) : "--";
+
+    // Tyres
+    var corners = ["fl","fr","rl","rr"];
+    for (var i = 0; i < 4; i++) {
+      var p = d.tyre_pressure[i];
+      g("tp-" + corners[i]).innerHTML = p > 0 ? p.toFixed(0) : "--";
+    }
+  };
+  xhr.send();
+}
+
+// Poll at ~5Hz
+setInterval(poll, 200);
+poll();
+
+var fsBtn = g("fs-btn");
+if (fsBtn) {
+  fsBtn.onclick = function() {
+    var el = document.documentElement;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  };
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=simbridge
+GenericName=Sim Racing Dashboard
+Comment=Telemetry dashboards and audio effects for sim racing on Linux
+Exec=xdg-open http://localhost:8888
+Icon=simbridge
+Terminal=false
+Type=Application
+Categories=Game;Utility;
+Keywords=simracing;telemetry;dashboard;acc;dirtally;
+StartupNotify=false

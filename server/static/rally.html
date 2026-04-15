@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>simbridge rally</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #0c0c10;
+  color: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.dash {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  height: 100vh;
+  padding: 4px;
+  gap: 3px;
+}
+
+/* === TOP ROW: RPM + SPEED === */
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.top-cell {
+  background: #141418;
+  border: 1px solid #252530;
+  border-radius: 4px;
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.top-label {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.top-val {
+  font-size: clamp(22px, 6vw, 36px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e8e8ec;
+}
+
+/* === RPM BAR === */
+.rpm-strip {
+  display: flex;
+  gap: 1px;
+  height: 10px;
+  padding: 0 1px;
+}
+.rpm-s {
+  flex: 1;
+  background: #1a1a20;
+  border-radius: 1px;
+}
+.rpm-s.g { background: #22c55e; }
+.rpm-s.y { background: #eab308; }
+.rpm-s.r { background: #ef4444; }
+.rpm-s.blink { animation: bl 80ms infinite; }
+@keyframes bl { 50% { opacity: 0.2; } }
+
+/* === GEAR CENTER === */
+.gear-area {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 3px;
+  align-items: center;
+}
+
+.gear-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 100px;
+  transition: background-color 150ms;
+  background: #141418;
+}
+
+.gear-num {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(120px, 30vw, 200px);
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+}
+.gear-num.gear-r { color: #ef4444; }
+/* No grey for neutral — stays white */
+
+/* Side panels */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.side-cell {
+  background: #141418;
+  border: 1px solid #252530;
+  border-radius: 4px;
+  padding: 6px 8px;
+  text-align: center;
+}
+.side-label {
+  font-size: 8px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.side-val {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Flat tyre indicator */
+.tyre-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+.tyre-indicator {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 0;
+  text-align: center;
+  border-radius: 2px;
+}
+.tyre-ok { color: #22c55e; }
+.tyre-flat { color: #fff; background: #ef4444; animation: flat-blink 500ms infinite; }
+@keyframes flat-blink {
+  50% { opacity: 0.4; }
+}
+
+/* === STAGE INFO ROW === */
+.stage-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 3px;
+  align-items: center;
+}
+.stage-time-box {
+  background: #141418;
+  border: 1px solid #252530;
+  border-radius: 4px;
+  padding: 4px 16px;
+  text-align: center;
+}
+.stage-label {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.stage-time {
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e8e8ec;
+}
+
+.info-cell {
+  background: #141418;
+  border: 1px solid #252530;
+  border-radius: 4px;
+  padding: 4px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.info-label {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+.info-val {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* === PROGRESS BAR === */
+.progress-wrap {
+  background: #141418;
+  border: 1px solid #252530;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.progress-label {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.progress-track {
+  flex: 1;
+  height: 6px;
+  background: #1a1a20;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #22c55e);
+  border-radius: 3px;
+  transition: width 200ms;
+}
+.progress-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b0b0b0;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+  text-align: right;
+}
+
+.status {
+  position: fixed;
+  bottom: 2px;
+  right: 6px;
+  font-size: 9px;
+  color: #333;
+}
+.status.live { color: #22c55e; }
+
+.fs-btn {
+  position: fixed;
+  top: 4px;
+  right: 4px;
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 20px;
+  line-height: 36px;
+  text-align: center;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <!-- TOP: RPM | SPEED -->
+  <div class="top-row">
+    <div class="top-cell">
+      <span class="top-label">RPM</span>
+      <span class="top-val" id="rpm">0</span>
+    </div>
+    <div class="top-cell">
+      <span class="top-label">KM/H</span>
+      <span class="top-val" id="speed">0</span>
+    </div>
+  </div>
+
+  <!-- RPM STRIP -->
+  <div class="rpm-strip" id="rpm-strip"></div>
+
+  <!-- GEAR + SIDES -->
+  <div class="gear-area">
+    <!-- Left: fuel + TC/ABS -->
+    <div class="side-panel">
+      <div class="side-cell">
+        <div class="side-label">Fuel</div>
+        <div class="side-val" id="fuel">--</div>
+      </div>
+      <div class="side-cell">
+        <div class="side-label">TC</div>
+        <div class="side-val" id="tc">0</div>
+      </div>
+      <div class="side-cell">
+        <div class="side-label">ABS</div>
+        <div class="side-val" id="abs">0</div>
+      </div>
+    </div>
+
+    <!-- Center: gear with solid RPM-based background -->
+    <div class="gear-box" id="gear-box">
+      <span class="gear-num" id="gear">N</span>
+    </div>
+
+    <!-- Right: tyre flat indicator + position -->
+    <div class="side-panel">
+      <div class="side-cell">
+        <div class="side-label">Tyres</div>
+        <div class="tyre-status">
+          <span class="tyre-indicator tyre-ok" id="ty-fl">FL</span>
+          <span class="tyre-indicator tyre-ok" id="ty-fr">FR</span>
+          <span class="tyre-indicator tyre-ok" id="ty-rl">RL</span>
+          <span class="tyre-indicator tyre-ok" id="ty-rr">RR</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE INFO -->
+  <div class="stage-row">
+    <div class="info-cell">
+      <span class="info-label">Distance</span>
+      <span class="info-val" id="distance">-- km</span>
+    </div>
+    <div class="stage-time-box">
+      <div class="stage-label">Stage Time</div>
+      <div class="stage-time" id="stagetime">0:00.00</div>
+    </div>
+    <div class="info-cell">
+      <span class="info-label">Stage</span>
+      <span class="info-val" id="stage-len">-- km</span>
+    </div>
+  </div>
+
+  <!-- PROGRESS BAR -->
+  <div class="progress-wrap">
+    <span class="progress-label">Stage</span>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress" style="width:0%"></div>
+    </div>
+    <span class="progress-pct" id="progress-pct">-- / -- km</span>
+  </div>
+</div>
+
+<span class="status" id="status">--</span>
+<div class="fs-btn" id="fs-btn" title="Fullscreen">&#x26F6;</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const NUM_SEGS = 50;
+
+// Build RPM strip
+(function() {
+  const strip = $('rpm-strip');
+  for (let i = 0; i < NUM_SEGS; i++) {
+    const s = document.createElement('div');
+    s.className = 'rpm-s';
+    strip.appendChild(s);
+  }
+})();
+
+function formatTime(s) {
+  if (s <= 0) return '0:00.00';
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + sec.toFixed(2).padStart(5, '0');
+}
+
+// Gear background color based on RPM percentage
+// One solid color at a time, not bands
+function gearBgColor(rpmPct) {
+  if (rpmPct >= 0.93) return '#7f1d1d'; // deep red — past optimal, hit limiter soon
+  if (rpmPct >= 0.85) return '#991b1b'; // red — shift NOW
+  if (rpmPct >= 0.75) return '#78350f'; // orange — approaching shift point
+  if (rpmPct >= 0.60) return '#14532d'; // green — in the power band, good to shift
+  return '#141418'; // neutral dark — below shift range
+}
+
+// Flat tyre detection: pressure drops significantly (below ~15 PSI = likely flat)
+const FLAT_THRESHOLD = 15;
+
+function connect() {
+  const ws = new WebSocket('ws://' + location.host + '/ws');
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (!d.connected) {
+      $('status').className = 'status';
+      $('status').textContent = 'no signal';
+      return;
+    }
+    $('status').className = 'status live';
+    $('status').textContent = 'live';
+
+    // RPM
+    $('rpm').textContent = Math.round(d.rpm);
+
+    // Speed
+    $('speed').textContent = Math.round(d.speed_kmh);
+
+    // RPM bar (segmented, left to right as normal)
+    const rpmPct = d.max_rpm > 0 ? d.rpm / d.max_rpm : 0;
+    const litCount = Math.round(rpmPct * NUM_SEGS);
+    const segs = $('rpm-strip').children;
+    for (let i = 0; i < NUM_SEGS; i++) {
+      const p = i / NUM_SEGS;
+      if (i < litCount) {
+        if (p > 0.85) segs[i].className = rpmPct > 0.95 ? 'rpm-s blink r' : 'rpm-s r';
+        else if (p > 0.7) segs[i].className = 'rpm-s y';
+        else segs[i].className = 'rpm-s g';
+      } else {
+        segs[i].className = 'rpm-s';
+      }
+    }
+
+    // Gear — solid background color based on RPM
+    $('gear-box').style.backgroundColor = gearBgColor(rpmPct);
+
+    // Gear number — always white (red only for reverse)
+    const g = $('gear');
+    g.textContent = d.gear;
+    g.className = 'gear-num' + (d.gear === 'R' ? ' gear-r' : '');
+
+    // Stage time
+    $('stagetime').textContent = formatTime(d.lap_time);
+
+    // Fuel
+    $('fuel').textContent = d.fuel > 0 ? d.fuel.toFixed(1) + 'L' : '--';
+
+    // TC/ABS
+    $('tc').textContent = d.tc > 0 ? d.tc.toFixed(0) : '0';
+    $('abs').textContent = d.abs > 0 ? d.abs.toFixed(0) : '0';
+
+    // Flat tyre indicators
+    const corners = ['fl','fr','rl','rr'];
+    for (let i = 0; i < 4; i++) {
+      const p = d.tyre_pressure[i];
+      const el = $('ty-' + corners[i]);
+      if (p > 0 && p < FLAT_THRESHOLD) {
+        el.className = 'tyre-indicator tyre-flat';
+        el.textContent = corners[i].toUpperCase() + ' FLAT';
+      } else {
+        el.className = 'tyre-indicator tyre-ok';
+        el.textContent = corners[i].toUpperCase();
+      }
+    }
+
+    // Distance into stage (lap_distance from telemetry, convert m to km)
+    const distKm = d.lap_time > 0 ? (d.speed_kmh * d.lap_time / 3600) : 0;
+    $('distance').textContent = distKm > 0 ? distKm.toFixed(1) + ' km' : '-- km';
+
+    // Stage length (track_size not available yet, show --)
+    $('stage-len').textContent = '-- km';
+
+    // Progress bar
+    $('progress').style.width = '0%';
+    $('progress-pct').textContent = distKm > 0 ? distKm.toFixed(1) + ' km' : '-- / -- km';
+  };
+
+  ws.onclose = () => {
+    $('status').className = 'status';
+    $('status').textContent = 'reconnecting';
+    setTimeout(connect, 2000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+connect();
+
+$('fs-btn').onclick = function() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+};
+</script>
+</body>
+</html>

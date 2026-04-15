@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>simbridge circuit</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #111215;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+.dash {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  gap: 0;
+}
+
+/* === TOP ROW === */
+.top-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border-bottom: 2px solid #2a9d8f;
+}
+.top-cell {
+  padding: 3px 6px;
+  text-align: center;
+  border-right: 1px solid #252830;
+}
+.top-cell:last-child { border-right: none; }
+.top-lbl {
+  font-size: 8px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.top-val {
+  font-size: clamp(14px, 3.5vw, 20px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.delta-pos { color: #ef4444; }
+.delta-neg { color: #22c55e; }
+
+/* === MIDDLE === */
+.mid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  border-bottom: 2px solid #2a9d8f;
+}
+
+/* Left panel */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #252830;
+}
+.lp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 8px;
+  border-bottom: 1px solid #1c1e22;
+  flex: 1;
+}
+.lp-lbl {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.lp-val {
+  font-size: clamp(13px, 3vw, 18px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+/* Center: gear + speed + fuel/ers bars */
+.center {
+  display: grid;
+  grid-template-columns: 16px 1fr 16px;
+  grid-template-rows: auto 1fr auto;
+  min-width: clamp(100px, 25vw, 160px);
+  position: relative;
+}
+
+/* Vertical bars */
+.vbar {
+  display: flex;
+  flex-direction: column-reverse;
+  background: #1a1c20;
+  position: relative;
+}
+.vbar-fill {
+  transition: height 100ms;
+}
+.vbar-fuel .vbar-fill { background: #f59e0b; }
+.vbar-ers .vbar-fill { background: #3b82f6; }
+.vbar-lbl {
+  position: absolute;
+  top: 2px;
+  width: 100%;
+  text-align: center;
+  font-size: 7px;
+  color: #9ca3af;
+  letter-spacing: 0.5px;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+}
+.vbar-val {
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  padding: 1px 0;
+  font-variant-numeric: tabular-nums;
+  color: #b0b0b0;
+}
+
+/* Speed */
+.speed-box {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: center;
+  padding: 2px 0;
+  border-bottom: 1px solid #252830;
+}
+.speed-val {
+  font-size: clamp(24px, 6vw, 36px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+/* Gear */
+.gear-box {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gear-val {
+  font-size: clamp(60px, 16vw, 100px);
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+}
+.gear-r { color: #ef4444; }
+.gear-n { color: #9ca3af; }
+
+/* Bottom of center */
+.center-bot {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #252830;
+}
+.cb-cell {
+  text-align: center;
+  padding: 1px 4px;
+}
+.cb-lbl { font-size: 7px; color: #9ca3af; text-transform: uppercase; }
+.cb-val { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Fuel bar left */
+.fuel-bar-area {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+.ers-bar-area {
+  grid-column: 3;
+  grid-row: 1 / 3;
+}
+
+/* Right panel */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #252830;
+}
+.rp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 8px;
+  border-bottom: 1px solid #1c1e22;
+  flex: 1;
+}
+.rp-lbl {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rp-val {
+  font-size: clamp(13px, 3vw, 18px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.rp-val.best { color: #a855f7; }
+
+/* === BOTTOM ROW === */
+.bot-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 2px solid #2a9d8f;
+}
+.bot-cell {
+  text-align: center;
+  padding: 3px 4px;
+  border-right: 1px solid #252830;
+}
+.bot-cell:last-child { border-right: none; }
+.bot-lbl {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bot-val {
+  font-size: clamp(12px, 2.8vw, 16px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Bottom bar colors */
+.bot-oil .bot-lbl { color: #eab308; }
+.bot-oil .bot-val { color: #eab308; }
+.bot-water .bot-lbl { color: #06b6d4; }
+.bot-water .bot-val { color: #06b6d4; }
+.bot-tc .bot-lbl { color: #22c55e; }
+.bot-tc .bot-val { color: #22c55e; }
+.bot-tcc .bot-lbl { color: #22c55e; }
+.bot-tcc .bot-val { color: #22c55e; }
+.bot-abs .bot-lbl { color: #3b82f6; }
+.bot-abs .bot-val { color: #3b82f6; }
+.bot-bms .bot-lbl { color: #ef4444; }
+.bot-bms .bot-val { color: #ef4444; }
+.bot-map .bot-lbl { color: #f97316; }
+.bot-map .bot-val { color: #f97316; }
+
+.status {
+  position: fixed;
+  bottom: 1px;
+  right: 4px;
+  font-size: 8px;
+  color: #333;
+}
+.status.live { color: #2a9d8f; }
+
+.fs-btn {
+  position: fixed;
+  top: 4px;
+  right: 4px;
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 20px;
+  line-height: 36px;
+  text-align: center;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <!-- TOP ROW -->
+  <div class="top-row">
+    <div class="top-cell"><div class="top-lbl">Pos</div><div class="top-val" id="pos">0</div></div>
+    <div class="top-cell"><div class="top-lbl">Lap</div><div class="top-val" id="lap">0</div></div>
+    <div class="top-cell"><div class="top-lbl">Behind</div><div class="top-val" id="behind">0.0</div></div>
+    <div class="top-cell"><div class="top-lbl">Ahead</div><div class="top-val" id="ahead">0.0</div></div>
+    <div class="top-cell"><div class="top-lbl">Leader</div><div class="top-val" id="leader">+0.0</div></div>
+    <div class="top-cell"><div class="top-lbl">Delta</div><div class="top-val" id="delta">0</div></div>
+  </div>
+
+  <!-- MIDDLE -->
+  <div class="mid">
+    <!-- Left panel -->
+    <div class="left-panel">
+      <div class="lp-row">
+        <span class="lp-lbl">Session Time</span>
+        <span class="lp-val" id="session-time">00.00.00</span>
+      </div>
+      <div class="lp-row">
+        <span class="lp-lbl">Fuel Laps</span>
+        <span class="lp-val" id="fuel-laps">00</span>
+      </div>
+      <div class="lp-row">
+        <span class="lp-lbl">Fuel Time</span>
+        <span class="lp-val" id="fuel-time">00</span>
+      </div>
+      <div class="lp-row">
+        <span class="lp-lbl">Fuel Avg</span>
+        <span class="lp-val" id="fuel-avg">0.0</span>
+      </div>
+      <div class="lp-row">
+        <span class="lp-lbl">Fuel Rem</span>
+        <span class="lp-val" id="fuel-rem">0.0</span>
+      </div>
+    </div>
+
+    <!-- Center: fuel bar + speed + gear + ers bar -->
+    <div class="center">
+      <div class="fuel-bar-area vbar vbar-fuel">
+        <div class="vbar-fill" id="fuel-bar" style="height:0%"></div>
+      </div>
+      <div class="speed-box">
+        <div class="speed-val" id="speed">0</div>
+      </div>
+      <div class="ers-bar-area vbar vbar-ers">
+        <div class="vbar-fill" id="ers-bar" style="height:0%"></div>
+      </div>
+      <div class="gear-box">
+        <span class="gear-val gear-n" id="gear">N</span>
+      </div>
+      <div class="center-bot">
+        <div class="cb-cell">
+          <div class="cb-lbl">Fuel</div>
+          <div class="cb-val" id="fuel-val">0</div>
+        </div>
+        <div class="cb-cell">
+          <div class="cb-lbl">ERS</div>
+          <div class="cb-val" id="ers-val">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <div class="rp-row">
+        <span class="rp-lbl">Last</span>
+        <span class="rp-val" id="last-time">00:00:00</span>
+      </div>
+      <div class="rp-row">
+        <span class="rp-lbl">Session Best</span>
+        <span class="rp-val best" id="session-best">00:00:00</span>
+      </div>
+      <div class="rp-row">
+        <span class="rp-lbl">All Time Best</span>
+        <span class="rp-val best" id="all-best">00:00:00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="bot-row">
+    <div class="bot-cell bot-oil"><div class="bot-lbl">Oil</div><div class="bot-val" id="oil">0°</div></div>
+    <div class="bot-cell bot-water"><div class="bot-lbl">Water</div><div class="bot-val" id="water">0°</div></div>
+    <div class="bot-cell bot-tc"><div class="bot-lbl">TC</div><div class="bot-val" id="tc">00</div></div>
+    <div class="bot-cell bot-tcc"><div class="bot-lbl">TCC</div><div class="bot-val" id="tcc">00</div></div>
+    <div class="bot-cell bot-abs"><div class="bot-lbl">ABS</div><div class="bot-val" id="abs">00</div></div>
+    <div class="bot-cell bot-bms"><div class="bot-lbl">BMS</div><div class="bot-val" id="bms">00.0</div></div>
+    <div class="bot-cell bot-map"><div class="bot-lbl">Map</div><div class="bot-val" id="map">00</div></div>
+  </div>
+</div>
+
+<span class="status" id="status">--</span>
+<div class="fs-btn" id="fs-btn" title="Fullscreen">&#x26F6;</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function fmtLap(s) {
+  if (s <= 0) return '00:00:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  const ms = Math.round((s % 1) * 100);
+  return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0') + ':' + String(ms).padStart(2,'0');
+}
+
+function fmtSession(s) {
+  if (s <= 0) return '00.00.00';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return String(h).padStart(2,'0') + '.' + String(m).padStart(2,'0') + '.' + String(sec).padStart(2,'0');
+}
+
+function connect() {
+  const ws = new WebSocket('ws://' + location.host + '/ws');
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (!d.connected) {
+      $('status').className = 'status';
+      $('status').textContent = 'no signal';
+      return;
+    }
+    $('status').className = 'status live';
+    $('status').textContent = 'live';
+
+    // Top row
+    $('pos').textContent = d.position > 0 ? d.position : '0';
+    $('lap').textContent = d.lap;
+    $('behind').textContent = '0.0';
+    $('ahead').textContent = '0.0';
+    $('leader').textContent = '+0.0';
+
+    const delta = $('delta');
+    delta.textContent = '0';
+    delta.className = 'top-val';
+
+    // Speed
+    $('speed').textContent = Math.round(d.speed_kmh);
+
+    // Gear
+    const g = $('gear');
+    g.textContent = d.gear;
+    g.className = 'gear-val' + (d.gear === 'R' ? ' gear-r' : d.gear === 'N' ? ' gear-n' : '');
+
+    // Left panel
+    $('session-time').textContent = fmtSession(d.lap_time > 0 ? d.lap_time + (d.lap * 90) : 0);
+    $('fuel-laps').textContent = d.fuel_capacity > 0 ? Math.floor(d.fuel / (d.fuel_capacity / 20)).toString().padStart(2,'0') : '00';
+    $('fuel-time').textContent = '00';
+    $('fuel-avg').textContent = '0.0';
+    $('fuel-rem').textContent = d.fuel > 0 ? d.fuel.toFixed(1) : '0.0';
+
+    // Fuel bar
+    const fuelPct = d.fuel_capacity > 0 ? (d.fuel / d.fuel_capacity) * 100 : 0;
+    $('fuel-bar').style.height = fuelPct + '%';
+    $('fuel-val').textContent = d.fuel > 0 ? Math.round(d.fuel) : '0';
+    $('ers-val').textContent = '0';
+
+    // Right panel
+    $('last-time').textContent = fmtLap(d.last_lap_time);
+    $('session-best').textContent = '00:00:00';
+    $('all-best').textContent = '00:00:00';
+
+    // Bottom row
+    $('oil').textContent = '0°';
+    $('water').textContent = '0°';
+    $('tc').textContent = d.tc > 0 ? d.tc.toFixed(0).padStart(2,'0') : '00';
+    $('tcc').textContent = '00';
+    $('abs').textContent = d.abs > 0 ? d.abs.toFixed(0).padStart(2,'0') : '00';
+    $('bms').textContent = '00.0';
+    $('map').textContent = '00';
+  };
+  ws.onclose = () => {
+    $('status').className = 'status';
+    $('status').textContent = 'reconnecting';
+    setTimeout(connect, 2000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+connect();
+
+$('fs-btn').onclick = function() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+};
+</script>
+</body>
+</html>

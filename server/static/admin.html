@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>simbridge</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0a0a0c;
+  --surface: #131318;
+  --surface2: #1a1a22;
+  --border: #1e1e26;
+  --text: #e8e8ec;
+  --dim: #6b6b78;
+  --muted: #3a3a46;
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  padding: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.logo span { color: var(--dim); font-weight: 400; }
+.version { font-size: 12px; color: var(--muted); }
+.dash-link {
+  font-size: 13px;
+  color: var(--blue);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.dash-link:hover { background: var(--surface); }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 900px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 16px;
+}
+
+/* Status card */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--dim);
+}
+.stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.dot-green { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+.dot-red { background: var(--red); }
+.dot-amber { background: var(--amber); box-shadow: 0 0 6px rgba(245,158,11,0.3); }
+
+/* Live telemetry mini */
+.mini-telem {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.mini-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+}
+.mini-label {
+  font-size: 10px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+/* Audio card */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.slider-row label {
+  font-size: 13px;
+  min-width: 80px;
+  color: var(--dim);
+}
+.slider-row input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  outline: none;
+}
+.slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue);
+  cursor: pointer;
+}
+.slider-row input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue);
+  cursor: pointer;
+  border: none;
+}
+.slider-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--dim);
+  min-width: 40px;
+  text-align: right;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.toggle-label { font-size: 14px; font-weight: 500; }
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--muted);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 200ms;
+}
+.toggle.on { background: var(--green); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 200ms;
+}
+.toggle.on::after { transform: translateX(20px); }
+
+.device-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.section-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 16px 0 8px;
+}
+
+/* Full width cards */
+.card-full { grid-column: 1 / -1; }
+
+.footer {
+  margin-top: 24px;
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 900px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">simbridge <span>server</span></div>
+    <div class="version">v0.1.0</div>
+  </div>
+  <a class="dash-link" href="/dash" target="_blank" id="dash-link">Open Dashboard</a>
+</div>
+
+<div class="grid">
+  <!-- Status -->
+  <div class="card">
+    <div class="card-title">Connection Status</div>
+    <div class="status-grid">
+      <div class="stat">
+        <div class="stat-label">Bridge</div>
+        <div class="stat-val" id="bridge-status"><span class="dot dot-red"></span>Waiting</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Packets/sec</div>
+        <div class="stat-val" id="pps">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Packets</div>
+        <div class="stat-val" id="total-pkts">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-val" id="uptime">0s</div>
+      </div>
+    </div>
+    <div class="mini-telem">
+      <div><div class="mini-val" id="m-speed">0</div><div class="mini-label">km/h</div></div>
+      <div><div class="mini-val" id="m-rpm">0</div><div class="mini-label">rpm</div></div>
+      <div><div class="mini-val" id="m-gear">N</div><div class="mini-label">gear</div></div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="card">
+    <div class="card-title">Dashboard</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Mode</span>
+      <div style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+        <button class="sw-btn" id="mode-circuit" onclick="setDashMode('circuit')" style="padding:6px 16px;font-size:13px;background:var(--surface2);color:var(--dim);border:none;cursor:pointer">Circuit</button>
+        <button class="sw-btn" id="mode-rally" onclick="setDashMode('rally')" style="padding:6px 16px;font-size:13px;background:var(--surface2);color:var(--dim);border:none;cursor:pointer">Rally</button>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--dim)">
+      Open on phone: <strong id="dash-url-inline" style="color:var(--text)">loading...</strong>
+    </div>
+    <div style="margin-top:4px;font-size:11px;color:var(--muted)">
+      Changing mode requires a page refresh on the phone.
+    </div>
+  </div>
+
+  <!-- Audio -->
+  <div class="card">
+    <div class="card-title">Audio Output</div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Audio Enabled</span>
+      <div class="toggle" id="audio-toggle" onclick="toggleAudio()"></div>
+    </div>
+
+    <select class="device-select" id="audio-device" onchange="updateAudio()">
+      <option value="">Default device</option>
+    </select>
+
+    <div class="slider-row">
+      <label>Master</label>
+      <input type="range" min="0" max="100" value="70" id="sl-master" oninput="updateAudio()">
+      <span class="slider-val" id="sv-master">70%</span>
+    </div>
+
+    <div class="section-label">Effects</div>
+
+    <div class="slider-row">
+      <label>ABS</label>
+      <input type="range" min="0" max="100" value="60" id="sl-abs" oninput="updateAudio()">
+      <span class="slider-val" id="sv-abs">60%</span>
+    </div>
+    <div class="slider-row">
+      <label>Slip</label>
+      <input type="range" min="0" max="100" value="50" id="sl-slip" oninput="updateAudio()">
+      <span class="slider-val" id="sv-slip">50%</span>
+    </div>
+    <div class="slider-row">
+      <label>Landing</label>
+      <input type="range" min="0" max="100" value="80" id="sl-landing" oninput="updateAudio()">
+      <span class="slider-val" id="sv-landing">80%</span>
+    </div>
+    <div class="slider-row">
+      <label>Impact</label>
+      <input type="range" min="0" max="100" value="70" id="sl-impact" oninput="updateAudio()">
+      <span class="slider-val" id="sv-impact">70%</span>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Dashboard URL for phone: <strong id="dash-url">loading...</strong>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let audioEnabled = true;
+
+// Resolve actual dashboard URL
+fetch('/api/dash-url').then(r => r.json()).then(d => {
+  const url = d.urls[0] || 'http://localhost:8888/dash';
+  $('dash-url').textContent = url;
+  $('dash-url-inline').textContent = url;
+});
+
+// Load dashboard mode
+fetch('/api/dash-mode').then(r => r.json()).then(d => {
+  highlightMode(d.mode);
+});
+
+function highlightMode(mode) {
+  $('mode-circuit').style.background = mode === 'circuit' ? '#2a9d8f' : 'var(--surface2)';
+  $('mode-circuit').style.color = mode === 'circuit' ? '#fff' : 'var(--dim)';
+  $('mode-rally').style.background = mode === 'rally' ? '#2a9d8f' : 'var(--surface2)';
+  $('mode-rally').style.color = mode === 'rally' ? '#fff' : 'var(--dim)';
+}
+
+function setDashMode(mode) {
+  highlightMode(mode);
+  fetch('/api/dash-mode', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode}),
+  });
+}
+
+// Load audio devices
+fetch('/api/audio/devices').then(r => r.json()).then(devices => {
+  const sel = $('audio-device');
+  devices.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d;
+    sel.appendChild(opt);
+  });
+});
+
+// Load current audio config
+fetch('/api/audio').then(r => r.json()).then(cfg => {
+  audioEnabled = cfg.enabled;
+  $('audio-toggle').className = 'toggle' + (cfg.enabled ? ' on' : '');
+  $('sl-master').value = cfg.master_volume * 100;
+  $('sv-master').textContent = Math.round(cfg.master_volume * 100) + '%';
+  $('sl-abs').value = cfg.abs_volume * 100;
+  $('sv-abs').textContent = Math.round(cfg.abs_volume * 100) + '%';
+  $('sl-slip').value = cfg.slip_volume * 100;
+  $('sv-slip').textContent = Math.round(cfg.slip_volume * 100) + '%';
+  $('sl-landing').value = cfg.landing_volume * 100;
+  $('sv-landing').textContent = Math.round(cfg.landing_volume * 100) + '%';
+  $('sl-impact').value = cfg.impact_volume * 100;
+  $('sv-impact').textContent = Math.round(cfg.impact_volume * 100) + '%';
+  if (cfg.device_name) $('audio-device').value = cfg.device_name;
+});
+
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  $('audio-toggle').className = 'toggle' + (audioEnabled ? ' on' : '');
+  updateAudio();
+}
+
+let updateTimer = null;
+function updateAudio() {
+  // Update displayed values
+  ['master','abs','slip','landing','impact'].forEach(k => {
+    $('sv-' + k).textContent = $('sl-' + k).value + '%';
+  });
+
+  // Debounce API call
+  clearTimeout(updateTimer);
+  updateTimer = setTimeout(() => {
+    const cfg = {
+      enabled: audioEnabled,
+      master_volume: $('sl-master').value / 100,
+      abs_volume: $('sl-abs').value / 100,
+      abs_freq: 30.0,
+      abs_pulse_rate: 10.0,
+      slip_volume: $('sl-slip').value / 100,
+      slip_freq: 25.0,
+      landing_volume: $('sl-landing').value / 100,
+      landing_freq: 45.0,
+      impact_volume: $('sl-impact').value / 100,
+      impact_freq: 35.0,
+      device_name: $('audio-device').value || null,
+    };
+    fetch('/api/audio', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(cfg),
+    });
+  }, 100);
+}
+
+function formatUptime(secs) {
+  if (secs < 60) return secs + 's';
+  if (secs < 3600) return Math.floor(secs/60) + 'm ' + (secs%60) + 's';
+  return Math.floor(secs/3600) + 'h ' + Math.floor((secs%3600)/60) + 'm';
+}
+
+// Admin WebSocket
+function connectAdmin() {
+  const ws = new WebSocket('ws://' + location.host + '/ws/admin');
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    const s = d.status;
+    const t = d.telemetry_snapshot;
+
+    // Bridge status
+    const bs = $('bridge-status');
+    if (s.bridge_connected) {
+      bs.innerHTML = '<span class="dot dot-green"></span>Connected';
+    } else {
+      bs.innerHTML = '<span class="dot dot-red"></span>Waiting';
+    }
+
+    $('pps').textContent = Math.round(s.packets_per_sec);
+    $('total-pkts').textContent = s.packets_received.toLocaleString();
+    $('uptime').textContent = formatUptime(s.uptime_secs);
+
+    // Mini telemetry
+    if (t.connected) {
+      $('m-speed').textContent = Math.round(t.speed_kmh);
+      $('m-rpm').textContent = Math.round(t.rpm);
+      $('m-gear').textContent = t.gear;
+    }
+  };
+  ws.onclose = () => setTimeout(connectAdmin, 2000);
+  ws.onerror = () => ws.close();
+}
+
+connectAdmin();
+</script>
+</body>
+</html>

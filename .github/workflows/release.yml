@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Install mingw-w64
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+
+      - name: Install ALSA dev (cpal dependency)
+        run: sudo apt-get install -y libasound2-dev
+
+      - name: Build bridge (Windows PE32+)
+        run: cd bridge && cargo build --release
+
+      - name: Build server (Linux native)
+        run: cargo build -p simbridge-server --release
+
+      - name: Package release tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          DIR="simbridge-${VERSION}-linux-x86_64"
+          mkdir -p "${DIR}/bin"
+          cp target/x86_64-pc-windows-gnu/release/simbridge.exe "${DIR}/bin/"
+          cp target/release/simbridge-server "${DIR}/bin/"
+          cp scripts/simbridge-launch "${DIR}/bin/"
+          cp install.sh uninstall.sh "${DIR}/"
+          cp simbridge.desktop simbridge-server.service "${DIR}/"
+          cp -r assets "${DIR}/"
+          cp README.md "${DIR}/" 2>/dev/null || true
+          chmod +x "${DIR}/install.sh" "${DIR}/uninstall.sh" "${DIR}/bin/simbridge-launch"
+          tar czf "${DIR}.tar.gz" "${DIR}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: simbridge-*-linux-x86_64.tar.gz
+          generate_release_notes: true

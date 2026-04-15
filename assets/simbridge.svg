@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#0a0a0c" stroke="#2a9d8f" stroke-width="16"/>
+  <!-- Gauge arc (speedometer style) -->
+  <path d="M128 352 A160 160 0 1 1 384 352" fill="none" stroke="#1a1a1e" stroke-width="40" stroke-linecap="round"/>
+  <path d="M128 352 A160 160 0 1 1 384 352" fill="none" stroke="#2a9d8f" stroke-width="40" stroke-linecap="round" stroke-dasharray="680" stroke-dashoffset="220"/>
+  <!-- Tick marks -->
+  <line x1="148" y1="210" x2="170" y2="225" stroke="#e8e8ec" stroke-width="6" stroke-linecap="round"/>
+  <line x1="175" y1="155" x2="192" y2="175" stroke="#e8e8ec" stroke-width="6" stroke-linecap="round"/>
+  <line x1="225" y1="118" x2="235" y2="142" stroke="#e8e8ec" stroke-width="6" stroke-linecap="round"/>
+  <line x1="256" y1="107" x2="256" y2="132" stroke="#e8e8ec" stroke-width="8" stroke-linecap="round"/>
+  <line x1="287" y1="118" x2="277" y2="142" stroke="#e8e8ec" stroke-width="6" stroke-linecap="round"/>
+  <line x1="337" y1="155" x2="320" y2="175" stroke="#e8e8ec" stroke-width="6" stroke-linecap="round"/>
+  <line x1="364" y1="210" x2="342" y2="225" stroke="#e8e8ec" stroke-width="6" stroke-linecap="round"/>
+  <!-- Needle -->
+  <line x1="256" y1="280" x2="320" y2="175" stroke="#ef4444" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="280" r="14" fill="#e8e8ec"/>
+  <!-- Label -->
+  <text x="256" y="390" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="42" fill="#e8e8ec" letter-spacing="4">SIMBRIDGE</text>
+</svg>

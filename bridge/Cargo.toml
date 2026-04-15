@@ -1,0 +1,19 @@
+[package]
+name = "simbridge-bridge"
+version = "0.1.0"
+edition = "2021"
+description = "Windows half — reads game SHM, sends UDP"
+
+[[bin]]
+name = "simbridge"
+path = "src/main.rs"
+
+[dependencies]
+simbridge-shared = { path = "../shared" }
+winapi = { version = "0.3", features = [
+    "memoryapi",
+    "handleapi",
+    "winnt",
+    "synchapi",
+    "errhandlingapi",
+] }

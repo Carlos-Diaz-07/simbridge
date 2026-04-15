@@ -1,0 +1,12 @@
+[Unit]
+Description=simbridge telemetry server (dashboard + audio)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/simbridge-server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

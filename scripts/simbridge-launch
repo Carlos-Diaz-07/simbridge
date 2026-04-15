@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# simbridge-launch — Steam launch options wrapper
+#
+# Steam launch options:
+#   /home/carlos/.local/bin/simbridge-launch acc %command%
+#
+# Launches the game first, then starts simbridge.exe in the background
+# using wine64 from the same Proton distribution (avoids prefix conflicts).
+
+GAME="$1"
+shift
+
+if [ -z "$GAME" ] || [ "$#" -eq 0 ]; then
+    echo "[simbridge-launch] Usage: simbridge-launch <game> %command%"
+    echo "[simbridge-launch] Games: acc, ac, acevo, acrally, rf2, beamng, auto"
+    exit 1
+fi
+
+SIMBRIDGE="$HOME/.local/bin/simbridge.exe"
+
+if [ ! -f "$SIMBRIDGE" ]; then
+    echo "[simbridge-launch] Error: simbridge.exe not found at $SIMBRIDGE"
+    echo "[simbridge-launch] Run: cd ~/code/simbridge && make install"
+    exec "$@"
+fi
+
+# Find the proton binary from Steam's %command% args
+PROTON_DIR=""
+for arg in "$@"; do
+    if [[ "$arg" == */proton ]]; then
+        PROTON_DIR="$(dirname "$arg")"
+        break
+    fi
+done
+
+if [ -z "$PROTON_DIR" ]; then
+    echo "[simbridge-launch] Warning: could not find Proton in command args, skipping bridge"
+    exec "$@"
+fi
+
+WINE64="$PROTON_DIR/files/bin/wine64"
+if [ ! -f "$WINE64" ]; then
+    echo "[simbridge-launch] Warning: wine64 not found at $WINE64, skipping bridge"
+    exec "$@"
+fi
+
+echo "[simbridge-launch] Proton dir: $PROTON_DIR"
+echo "[simbridge-launch] Game adapter: $GAME"
+
+# Launch simbridge AFTER the game, using wine64 directly.
+# This avoids prefix initialization conflicts — the game's Proton
+# sets up the wineserver, and we just attach to it.
+(
+    sleep 15
+    echo "[simbridge-launch] Starting simbridge..."
+    export WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
+    exec "$WINE64" "$SIMBRIDGE" "$GAME"
+) &
+
+# Launch the game normally — Steam tracks this PID
+exec "$@"
