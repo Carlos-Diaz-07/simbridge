@@ -1,4 +1,6 @@
-use simbridge_shared::CodemastersPacket;
+use simbridge_shared::{
+    BridgeExtension, CodemastersPacket, CODEMASTERS_PACKET_SIZE, EXTENDED_PACKET_SIZE,
+};
 use std::net::UdpSocket;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -33,6 +35,14 @@ pub struct TelemetryState {
     pub wheel_slip: f32,
     pub susp_vel: [f32; 4],
     pub vel_y: f32,
+    // Direct tactile signals from the bridge extension. Zero when the
+    // sender doesn't provide them (e.g. DR2 native UDP).
+    pub road_vibration: f32,
+    pub slip_vibration: f32,
+    pub g_vibration: f32,
+    pub abs_vibration: f32,
+    pub avg_susp_vel: f32,
+    pub has_extension: bool,
 }
 
 impl Default for TelemetryState {
@@ -64,18 +74,41 @@ impl Default for TelemetryState {
             wheel_slip: 0.0,
             susp_vel: [0.0; 4],
             vel_y: 0.0,
+            road_vibration: 0.0,
+            slip_vibration: 0.0,
+            g_vibration: 0.0,
+            abs_vibration: 0.0,
+            avg_susp_vel: 0.0,
+            has_extension: false,
         }
     }
 }
 
 impl TelemetryState {
-    pub fn from_packet(pkt: &CodemastersPacket) -> Self {
+    pub fn from_packet_with_ext(pkt: &CodemastersPacket, ext: Option<&BridgeExtension>) -> Self {
         let gear_str = pkt.gear_string().to_string();
+
+        // Codemasters DR2 native UDP stores engine_rate / max_rpm as RPM÷10.
+        // Authoritative reference:
+        //   PHARTGAMES/SpaceMonkey CodemastersExtraData3.xml — channels are
+        //   named "engine_rate_div10" and "max_rpm_div10" — and four
+        //   independent open-source DR2 parsers (dr2_logger, MavoSV8,
+        //   NaiveWang, SpaceMonkey) all multiply by 10 to display real RPM.
+        // The bridge already converts ACC SHM into true RPM, so only the
+        // no-extension (DR2-native) path needs the ×10 multiplier.
+        let to_rpm = |v: f32| v * 10.0;
+        let rpm = if ext.is_some() { pkt.engine_rate } else { to_rpm(pkt.engine_rate) };
+        let max_rpm = if pkt.max_rpm > 0.0 {
+            if ext.is_some() { pkt.max_rpm } else { to_rpm(pkt.max_rpm) }
+        } else {
+            8000.0
+        };
+
         TelemetryState {
             connected: true,
             speed_kmh: pkt.speed_kmh(),
-            rpm: pkt.engine_rate,
-            max_rpm: if pkt.max_rpm > 0.0 { pkt.max_rpm } else { 8000.0 },
+            rpm,
+            max_rpm,
             gear: gear_str,
             throttle: pkt.throttle,
             brake: pkt.brake,
@@ -123,6 +156,12 @@ impl TelemetryState {
                 pkt.susp_vel_rl, pkt.susp_vel_rr,
             ],
             vel_y: pkt.vel_y,
+            road_vibration: ext.map(|e| e.road_vibration).unwrap_or(0.0),
+            slip_vibration: ext.map(|e| e.slip_vibration).unwrap_or(0.0),
+            g_vibration: ext.map(|e| e.g_vibration).unwrap_or(0.0),
+            abs_vibration: ext.map(|e| e.abs_vibration).unwrap_or(0.0),
+            avg_susp_vel: ext.map(|e| e.avg_susp_vel).unwrap_or(0.0),
+            has_extension: ext.is_some(),
         }
     }
 }
@@ -150,11 +189,18 @@ pub fn start_receiver(
 
         loop {
             match sock.recv_from(&mut buf) {
-                Ok((264, _)) => {
+                Ok((n, _)) if n == CODEMASTERS_PACKET_SIZE || n == EXTENDED_PACKET_SIZE => {
                     let pkt = CodemastersPacket::from_bytes(
-                        buf[..264].try_into().unwrap()
+                        buf[..CODEMASTERS_PACKET_SIZE].try_into().unwrap()
                     );
-                    let new_state = TelemetryState::from_packet(&pkt);
+                    let ext = if n == EXTENDED_PACKET_SIZE {
+                        let ext_bytes: &[u8; 20] = buf[CODEMASTERS_PACKET_SIZE..n]
+                            .try_into().unwrap();
+                        Some(BridgeExtension::from_bytes(ext_bytes))
+                    } else {
+                        None
+                    };
+                    let new_state = TelemetryState::from_packet_with_ext(&pkt, ext.as_ref());
                     if let Ok(mut s) = state.lock() {
                         *s = new_state;
                     }

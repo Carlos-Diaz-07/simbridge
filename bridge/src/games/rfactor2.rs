@@ -1,4 +1,4 @@
-use crate::codemasters::CodemastersPacket;
+use crate::codemasters::{BridgeExtension, CodemastersPacket};
 use crate::games::GameAdapter;
 use crate::shm::SharedMemory;
 
@@ -268,7 +268,7 @@ impl GameAdapter for RFactor2Adapter {
         self.telemetry_shm.is_some()
     }
 
-    fn read(&mut self) -> Option<CodemastersPacket> {
+    fn read(&mut self) -> Option<(CodemastersPacket, BridgeExtension)> {
         let (veh, _idx) = self.find_player_telemetry()?;
 
         // Skip if no new data
@@ -344,7 +344,7 @@ impl GameAdapter for RFactor2Adapter {
         pkt.run_time = veh.elapsed_time as f32;
         pkt.sector = veh.current_sector as f32;
 
-        Some(pkt)
+        Some((pkt, BridgeExtension::zeroed()))
     }
 
     fn disconnect(&mut self) {

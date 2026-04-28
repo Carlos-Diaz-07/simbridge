@@ -279,6 +279,8 @@ body {
       <div style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
         <button class="sw-btn" id="mode-circuit" onclick="setDashMode('circuit')" style="padding:6px 16px;font-size:13px;background:var(--surface2);color:var(--dim);border:none;cursor:pointer">Circuit</button>
         <button class="sw-btn" id="mode-rally" onclick="setDashMode('rally')" style="padding:6px 16px;font-size:13px;background:var(--surface2);color:var(--dim);border:none;cursor:pointer">Rally</button>
+        <button class="sw-btn" id="mode-rally-lite" onclick="setDashMode('rally-lite')" style="padding:6px 16px;font-size:13px;background:var(--surface2);color:var(--dim);border:none;cursor:pointer">Rally Lite</button>
+        <button class="sw-btn" id="mode-lite" onclick="setDashMode('lite')" style="padding:6px 16px;font-size:13px;background:var(--surface2);color:var(--dim);border:none;cursor:pointer">Lite</button>
       </div>
     </div>
     <div style="margin-top:12px;font-size:12px;color:var(--dim)">
@@ -302,6 +304,11 @@ body {
       <option value="">Default device</option>
     </select>
 
+    <button id="btn-test-beep" onclick="testBeep()"
+      style="width:100%;padding:8px 12px;margin-bottom:16px;background:#2a9d8f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;font-weight:500">
+      Test rumble (50 Hz)
+    </button>
+
     <div class="slider-row">
       <label>Master</label>
       <input type="range" min="0" max="100" value="70" id="sl-master" oninput="updateAudio()">
@@ -310,6 +317,21 @@ body {
 
     <div class="section-label">Effects</div>
 
+    <div class="slider-row">
+      <label>Road</label>
+      <input type="range" min="0" max="100" value="50" id="sl-road" oninput="updateAudio()">
+      <span class="slider-val" id="sv-road">50%</span>
+    </div>
+    <div class="slider-row">
+      <label>G-load</label>
+      <input type="range" min="0" max="100" value="40" id="sl-g" oninput="updateAudio()">
+      <span class="slider-val" id="sv-g">40%</span>
+    </div>
+    <div class="slider-row">
+      <label>Engine</label>
+      <input type="range" min="0" max="100" value="40" id="sl-engine" oninput="updateAudio()">
+      <span class="slider-val" id="sv-engine">40%</span>
+    </div>
     <div class="slider-row">
       <label>ABS</label>
       <input type="range" min="0" max="100" value="60" id="sl-abs" oninput="updateAudio()">
@@ -340,6 +362,12 @@ body {
 <script>
 const $ = id => document.getElementById(id);
 let audioEnabled = true;
+// Until both /api/audio AND /api/audio/devices resolve, any POST would
+// overwrite saved settings with HTML-default slider values or with the
+// empty device dropdown. Gate on this flag.
+let configLoaded = false;
+let devicesLoaded = false;
+let pendingDeviceName = null;
 
 // Resolve actual dashboard URL
 fetch('/api/dash-url').then(r => r.json()).then(d => {
@@ -354,10 +382,11 @@ fetch('/api/dash-mode').then(r => r.json()).then(d => {
 });
 
 function highlightMode(mode) {
-  $('mode-circuit').style.background = mode === 'circuit' ? '#2a9d8f' : 'var(--surface2)';
-  $('mode-circuit').style.color = mode === 'circuit' ? '#fff' : 'var(--dim)';
-  $('mode-rally').style.background = mode === 'rally' ? '#2a9d8f' : 'var(--surface2)';
-  $('mode-rally').style.color = mode === 'rally' ? '#fff' : 'var(--dim)';
+  ['circuit', 'rally', 'rally-lite', 'lite'].forEach(function(m) {
+    var btn = $('mode-' + m);
+    btn.style.background = mode === m ? '#2a9d8f' : 'var(--surface2)';
+    btn.style.color = mode === m ? '#fff' : 'var(--dim)';
+  });
 }
 
 function setDashMode(mode) {
@@ -369,15 +398,41 @@ function setDashMode(mode) {
   });
 }
 
-// Load audio devices
+// Load audio devices.
+// Server returns objects: {name, description, kind: "pulse"|"alsa", is_default}.
+// PipeWire/Pulse sinks (friendly names) are grouped first, then raw ALSA fallback.
 fetch('/api/audio/devices').then(r => r.json()).then(devices => {
   const sel = $('audio-device');
-  devices.forEach(d => {
+  const pulse = devices.filter(d => d.kind === 'pulse');
+  const alsa = devices.filter(d => d.kind === 'alsa');
+
+  // Update the always-present "Default device" option label so it's clear
+  // it follows the system default (the same default the OS sound panel uses).
+  const defaultOpt = sel.querySelector('option[value=""]');
+  if (defaultOpt) defaultOpt.textContent = 'System default output';
+
+  function addOption(parent, d) {
     const opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = d;
-    sel.appendChild(opt);
-  });
+    opt.value = d.name;
+    opt.textContent = d.is_default ? d.description + '  (system default)' : d.description;
+    parent.appendChild(opt);
+  }
+
+  if (pulse.length) {
+    const g = document.createElement('optgroup');
+    g.label = 'Outputs';
+    pulse.forEach(d => addOption(g, d));
+    sel.appendChild(g);
+  }
+  if (alsa.length) {
+    const g = document.createElement('optgroup');
+    g.label = pulse.length ? 'Raw ALSA (advanced)' : 'Outputs';
+    alsa.forEach(d => addOption(g, d));
+    sel.appendChild(g);
+  }
+  devicesLoaded = true;
+  // If audio config already loaded but waiting for the dropdown, apply now.
+  if (pendingDeviceName) sel.value = pendingDeviceName;
 });
 
 // Load current audio config
@@ -386,6 +441,12 @@ fetch('/api/audio').then(r => r.json()).then(cfg => {
   $('audio-toggle').className = 'toggle' + (cfg.enabled ? ' on' : '');
   $('sl-master').value = cfg.master_volume * 100;
   $('sv-master').textContent = Math.round(cfg.master_volume * 100) + '%';
+  $('sl-road').value = cfg.road_volume * 100;
+  $('sv-road').textContent = Math.round(cfg.road_volume * 100) + '%';
+  $('sl-g').value = cfg.g_volume * 100;
+  $('sv-g').textContent = Math.round(cfg.g_volume * 100) + '%';
+  $('sl-engine').value = cfg.engine_volume * 100;
+  $('sv-engine').textContent = Math.round(cfg.engine_volume * 100) + '%';
   $('sl-abs').value = cfg.abs_volume * 100;
   $('sv-abs').textContent = Math.round(cfg.abs_volume * 100) + '%';
   $('sl-slip').value = cfg.slip_volume * 100;
@@ -394,8 +455,26 @@ fetch('/api/audio').then(r => r.json()).then(cfg => {
   $('sv-landing').textContent = Math.round(cfg.landing_volume * 100) + '%';
   $('sl-impact').value = cfg.impact_volume * 100;
   $('sv-impact').textContent = Math.round(cfg.impact_volume * 100) + '%';
-  if (cfg.device_name) $('audio-device').value = cfg.device_name;
+  // Defer device application until the dropdown has its options. Setting
+  // .value to a not-yet-present option silently fails and the dropdown
+  // shows "" — then any slider move would POST device_name=null and the
+  // saved device selection is gone. Track pending state instead.
+  if (cfg.device_name) {
+    pendingDeviceName = cfg.device_name;
+    if (devicesLoaded) $('audio-device').value = cfg.device_name;
+  }
+  configLoaded = true;
 });
+
+function testBeep() {
+  const btn = $('btn-test-beep');
+  const orig = btn.textContent;
+  btn.textContent = 'Pulse sent';
+  btn.disabled = true;
+  fetch('/api/audio/test', {method: 'POST'}).finally(() => {
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 600);
+  });
+}
 
 function toggleAudio() {
   audioEnabled = !audioEnabled;
@@ -406,9 +485,14 @@ function toggleAudio() {
 let updateTimer = null;
 function updateAudio() {
   // Update displayed values
-  ['master','abs','slip','landing','impact'].forEach(k => {
+  ['master','road','g','engine','abs','slip','landing','impact'].forEach(k => {
     $('sv-' + k).textContent = $('sl-' + k).value + '%';
   });
+
+  // Don't POST until config + device list have both loaded — otherwise
+  // we'd send HTML-default slider values or a blank device, overwriting
+  // whatever was persisted.
+  if (!configLoaded || !devicesLoaded) return;
 
   // Debounce API call
   clearTimeout(updateTimer);
@@ -416,6 +500,11 @@ function updateAudio() {
     const cfg = {
       enabled: audioEnabled,
       master_volume: $('sl-master').value / 100,
+      road_volume: $('sl-road').value / 100,
+      road_freq: 60.0,
+      g_volume: $('sl-g').value / 100,
+      g_freq: 35.0,
+      engine_volume: $('sl-engine').value / 100,
       abs_volume: $('sl-abs').value / 100,
       abs_freq: 30.0,
       abs_pulse_rate: 10.0,

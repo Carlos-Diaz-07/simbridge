@@ -1,1 +1,1 @@
-pub use simbridge_shared::CodemastersPacket;
+pub use simbridge_shared::{BridgeExtension, CodemastersPacket};

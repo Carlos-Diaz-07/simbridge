@@ -1,4 +1,4 @@
-use crate::codemasters::CodemastersPacket;
+use crate::codemasters::{BridgeExtension, CodemastersPacket};
 use crate::games::GameAdapter;
 use crate::shm::SharedMemory;
 
@@ -71,7 +71,7 @@ impl GameAdapter for BeamNGAdapter {
         self.shm.is_some()
     }
 
-    fn read(&mut self) -> Option<CodemastersPacket> {
+    fn read(&mut self) -> Option<(CodemastersPacket, BridgeExtension)> {
         let shm = self.shm.as_ref()?;
         let data: BeamNGData = unsafe { shm.read() };
 
@@ -99,7 +99,7 @@ impl GameAdapter for BeamNGAdapter {
             g => (g - 1) as f32,
         };
 
-        Some(pkt)
+        Some((pkt, BridgeExtension::zeroed()))
     }
 
     fn disconnect(&mut self) {

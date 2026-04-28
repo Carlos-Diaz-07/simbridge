@@ -160,8 +160,14 @@ fn main() {
 
         if connected {
             match adapter.read() {
-                Some(pkt) => {
-                    let _ = socket.send_to(pkt.as_bytes(), &target);
+                Some((pkt, ext)) => {
+                    // Concatenate Codemasters + bridge extension into one 284-byte
+                    // datagram. Server detects the extra bytes and uses them when
+                    // present; DR2 (which sends 264 directly) stays untouched.
+                    let mut buf = [0u8; 264 + 20];
+                    buf[..264].copy_from_slice(pkt.as_bytes());
+                    buf[264..].copy_from_slice(ext.as_bytes());
+                    let _ = socket.send_to(&buf, &target);
                     packets_sent += 1;
                 }
                 None => {

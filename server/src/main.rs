@@ -1,10 +1,12 @@
 mod audio;
 mod config;
 mod dashboard;
+mod persistence;
+mod pulse;
 mod telemetry;
 
-use config::{AudioConfig, DashConfig, ServerStatus};
-use std::sync::atomic::{AtomicBool, Ordering};
+use config::ServerStatus;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use telemetry::TelemetryState;
 
@@ -45,14 +47,24 @@ async fn main() {
         i += 1;
     }
 
+    // Load persisted config (device, sliders, dashboard mode). Defaults if absent.
+    // CLI flags applied below override the persisted values for this run only —
+    // the persisted file isn't rewritten unless the user changes something in
+    // the panel.
+    let persisted = persistence::load().unwrap_or_default();
+    let mut initial_audio = persisted.audio.clone();
+    if let Some(name) = audio_device.clone() {
+        initial_audio.device_name = Some(name);
+    }
+    if no_audio {
+        initial_audio.enabled = false;
+    }
+
     let telemetry_state = Arc::new(Mutex::new(TelemetryState::default()));
-    let audio_config = Arc::new(Mutex::new(AudioConfig {
-        device_name: audio_device.clone(),
-        enabled: !no_audio,
-        ..AudioConfig::default()
-    }));
+    let audio_config = Arc::new(Mutex::new(initial_audio));
     let server_status = Arc::new(Mutex::new(ServerStatus::default()));
     let running = Arc::new(AtomicBool::new(true));
+    let test_beep = Arc::new(AtomicU32::new(0));
 
     // Start UDP receiver
     telemetry::start_receiver(udp_port, telemetry_state.clone(), server_status.clone());
@@ -63,18 +75,20 @@ async fn main() {
         let audio_cfg = audio_config.clone();
         let audio_running = running.clone();
         let audio_status = server_status.clone();
+        let audio_beep = test_beep.clone();
         std::thread::spawn(move || {
-            audio::start_audio(audio_state, audio_cfg, audio_running, audio_status);
+            audio::start_audio(audio_state, audio_cfg, audio_running, audio_status, audio_beep);
         });
     }
 
     // Start web server
-    let dash_config = Arc::new(Mutex::new(DashConfig::default()));
+    let dash_config = Arc::new(Mutex::new(persisted.dash));
     let app_state = dashboard::AppState {
         telemetry: telemetry_state,
         audio_config,
         server_status,
         dash_config,
+        test_beep,
     };
     let app = dashboard::router(app_state);
     let addr = format!("0.0.0.0:{}", http_port);

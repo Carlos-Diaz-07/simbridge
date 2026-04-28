@@ -2,7 +2,7 @@ pub mod kunos;
 pub mod rfactor2;
 pub mod beamng;
 
-use crate::codemasters::CodemastersPacket;
+use crate::codemasters::{BridgeExtension, CodemastersPacket};
 
 /// Trait that each game adapter implements.
 pub trait GameAdapter {
@@ -16,9 +16,11 @@ pub trait GameAdapter {
     /// Check if still connected (SHM still valid).
     fn is_connected(&self) -> bool;
 
-    /// Read current telemetry and pack into a Codemasters UDP packet.
-    /// Returns None if no new data since last read.
-    fn read(&mut self) -> Option<CodemastersPacket>;
+    /// Read current telemetry. Returns the Codemasters wire packet plus the
+    /// tactile extension (vibration/suspension data the Codemasters format
+    /// can't carry). Returns None if no new data since last read.
+    /// Adapters without tactile data should return BridgeExtension::zeroed().
+    fn read(&mut self) -> Option<(CodemastersPacket, BridgeExtension)>;
 
     /// Disconnect and clean up.
     fn disconnect(&mut self);

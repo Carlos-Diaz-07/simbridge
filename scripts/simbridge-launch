@@ -50,10 +50,19 @@ echo "[simbridge-launch] Game adapter: $GAME"
 # Launch simbridge AFTER the game, using wine64 directly.
 # This avoids prefix initialization conflicts — the game's Proton
 # sets up the wineserver, and we just attach to it.
+# Proton sets Wine sync env vars (WINEFSYNC, WINEESYNC) in its own process,
+# not in Steam's launch env. Mirror them from the running wineserver.
 (
     sleep 15
     echo "[simbridge-launch] Starting simbridge..."
     export WINEPREFIX="$STEAM_COMPAT_DATA_PATH/pfx"
+    _ws_pid=$(pgrep -u "$USER" wineserver 2>/dev/null | head -1)
+    if [ -n "$_ws_pid" ] && [ -r "/proc/$_ws_pid/environ" ]; then
+        for _var in WINEFSYNC WINEESYNC; do
+            _val=$(tr '\0' '\n' < "/proc/$_ws_pid/environ" | grep "^${_var}=" | head -1)
+            [ -n "$_val" ] && export "$_val"
+        done
+    fi
     exec "$WINE64" "$SIMBRIDGE" "$GAME"
 ) &
 

@@ -73,6 +73,41 @@ pub struct CodemastersPacket {
 
 const _: () = assert!(std::mem::size_of::<CodemastersPacket>() == 264);
 
+/// Bridge-only telemetry extension appended after the Codemasters packet.
+/// Carries tactile signals that don't exist in the Codemasters wire format
+/// but are exposed by Kunos / other titles' shared memory directly.
+/// All vibration fields are 0..1 normalized; `avg_susp_vel` is m/s.
+/// Sent only by simbridge.exe — DR2 native UDP packets stay at 264 bytes.
+#[repr(C, packed)]
+#[derive(Clone, Copy, Default)]
+pub struct BridgeExtension {
+    pub road_vibration: f32,    // ACC kerb_vibration: surface texture / kerbs
+    pub slip_vibration: f32,    // ACC slip_vibrations: tyre slide
+    pub g_vibration: f32,       // ACC g_vibrations: cornering load
+    pub abs_vibration: f32,     // ACC abs_vibrations: ABS pulses
+    pub avg_susp_vel: f32,      // mean |dSuspTravel/dt| across 4 wheels (m/s)
+}
+
+const _: () = assert!(std::mem::size_of::<BridgeExtension>() == 20);
+
+/// Total wire size when the bridge appends an extension.
+pub const EXTENDED_PACKET_SIZE: usize = 264 + 20;
+pub const CODEMASTERS_PACKET_SIZE: usize = 264;
+
+impl BridgeExtension {
+    pub fn zeroed() -> Self { Self::default() }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(self as *const Self as *const u8, 20)
+        }
+    }
+
+    pub fn from_bytes(bytes: &[u8; 20]) -> Self {
+        unsafe { std::ptr::read(bytes.as_ptr() as *const Self) }
+    }
+}
+
 impl CodemastersPacket {
     pub fn zeroed() -> Self {
         unsafe { std::mem::zeroed() }

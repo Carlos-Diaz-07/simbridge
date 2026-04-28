@@ -6,6 +6,7 @@ use axum::Router;
 use axum::Json;
 use crate::config::{AudioConfig, DashConfig, SharedAudioConfig, SharedDashConfig, SharedServerStatus};
 use crate::telemetry::SharedState;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -15,6 +16,7 @@ pub struct AppState {
     pub audio_config: SharedAudioConfig,
     pub server_status: SharedServerStatus,
     pub dash_config: SharedDashConfig,
+    pub test_beep: Arc<AtomicU32>,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -25,9 +27,11 @@ pub fn router(state: AppState) -> Router {
         .route("/ws/admin", get(ws_admin))
         .route("/api/audio", get(get_audio_config).post(set_audio_config))
         .route("/api/audio/devices", get(list_audio_devices))
+        .route("/api/audio/test", post(trigger_test_beep))
         .route("/api/dash-url", get(get_dash_url))
         .route("/api/dash-mode", get(get_dash_mode).post(set_dash_mode))
         .route("/dash/lite", get(lite_page))
+        .route("/dash/rally-lite", get(rally_lite_page))
         .route("/api/telemetry", get(get_telemetry))
         .with_state(state)
 }
@@ -40,6 +44,8 @@ async fn dash_page(State(state): State<AppState>) -> Html<&'static str> {
     let mode = state.dash_config.lock().unwrap().mode.clone();
     match mode.as_str() {
         "rally" => Html(include_str!("../static/rally.html")),
+        "rally-lite" => Html(include_str!("../static/rally_lite.html")),
+        "lite" => Html(include_str!("../static/lite.html")),
         _ => Html(include_str!("../static/index.html")),
     }
 }
@@ -104,17 +110,75 @@ async fn set_audio_config(
     State(state): State<AppState>,
     Json(new_cfg): Json<AudioConfig>,
 ) -> Json<AudioConfig> {
-    let mut cfg = state.audio_config.lock().unwrap();
-    *cfg = new_cfg.clone();
+    {
+        let mut cfg = state.audio_config.lock().unwrap();
+        *cfg = new_cfg.clone();
+    }
+    persist(&state);
     Json(new_cfg)
 }
 
-async fn list_audio_devices() -> Json<Vec<String>> {
+/// Snapshot the current shared state and write it to disk. Cheap — the file
+/// is tiny — and synchronous so the next process restart sees the change.
+fn persist(state: &AppState) {
+    let audio = state.audio_config.lock().unwrap().clone();
+    let dash = state.dash_config.lock().unwrap().clone();
+    crate::persistence::save(&audio, &dash);
+}
+
+async fn trigger_test_beep(State(state): State<AppState>) -> Json<serde_json::Value> {
+    state.test_beep.fetch_add(1, Ordering::Relaxed);
+    Json(serde_json::json!({ "ok": true }))
+}
+
+#[derive(serde::Serialize)]
+struct DeviceInfo {
+    name: String,
+    description: String,
+    kind: &'static str, // "pulse" or "alsa"
+    is_default: bool,
+}
+
+async fn list_audio_devices() -> Json<Vec<DeviceInfo>> {
     use cpal::traits::{HostTrait, DeviceTrait};
-    let host = cpal::default_host();
-    let devices: Vec<String> = host.output_devices()
-        .map(|devs| devs.filter_map(|d| d.name().ok()).collect())
-        .unwrap_or_default();
+
+    let mut devices: Vec<DeviceInfo> = Vec::new();
+
+    // Prefer PipeWire/PulseAudio sinks — these have the friendly names
+    // shown in system sound settings.
+    let sinks = crate::pulse::list_sinks();
+    let default_sink = crate::pulse::default_sink_name();
+    let have_pulse = !sinks.is_empty();
+    for s in sinks {
+        let is_default = default_sink.as_deref() == Some(s.name.as_str());
+        devices.push(DeviceInfo {
+            description: s.description,
+            name: s.name,
+            kind: "pulse",
+            is_default,
+        });
+    }
+
+    // Always also include raw ALSA outputs for users without PipeWire/Pulse,
+    // or for power users who want to bypass the sound server.
+    if let Ok(devs) = cpal::default_host().output_devices() {
+        for d in devs {
+            if let Ok(name) = d.name() {
+                // Skip raw "pulse"/"pipewire" virtual devices when we already
+                // exposed pulse sinks via the friendly path above.
+                if have_pulse && (name == "pulse" || name == "pipewire") {
+                    continue;
+                }
+                devices.push(DeviceInfo {
+                    description: name.clone(),
+                    name,
+                    kind: "alsa",
+                    is_default: false,
+                });
+            }
+        }
+    }
+
     Json(devices)
 }
 
@@ -152,13 +216,20 @@ async fn set_dash_mode(
     State(state): State<AppState>,
     Json(new_cfg): Json<DashConfig>,
 ) -> Json<DashConfig> {
-    let mut cfg = state.dash_config.lock().unwrap();
-    *cfg = new_cfg.clone();
+    {
+        let mut cfg = state.dash_config.lock().unwrap();
+        *cfg = new_cfg.clone();
+    }
+    persist(&state);
     Json(new_cfg)
 }
 
 async fn lite_page() -> Html<&'static str> {
     Html(include_str!("../static/lite.html"))
+}
+
+async fn rally_lite_page() -> Html<&'static str> {
+    Html(include_str!("../static/rally_lite.html"))
 }
 
 async fn get_telemetry(State(state): State<AppState>) -> Json<crate::telemetry::TelemetryState> {

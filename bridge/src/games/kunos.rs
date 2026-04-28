@@ -1,6 +1,7 @@
-use crate::codemasters::CodemastersPacket;
+use crate::codemasters::{BridgeExtension, CodemastersPacket};
 use crate::games::GameAdapter;
 use crate::shm::SharedMemory;
+use std::time::Instant;
 
 // --- Kunos shared memory structs (ACC/AC/AC Evo/AC Rally) ---
 // All use acpmf_* naming, #[repr(C, packed(4))] alignment.
@@ -184,6 +185,10 @@ pub struct KunosAdapter {
     max_fuel: f32,
     track_length: f32,
     max_gears: f32,
+    // Suspension velocity derivation — ACC SHM only exposes travel,
+    // so we differentiate frame-to-frame to feed road-texture haptics.
+    last_susp_travel: Option<[f32; 4]>,
+    last_susp_time: Option<Instant>,
 }
 
 impl KunosAdapter {
@@ -198,6 +203,8 @@ impl KunosAdapter {
             max_fuel: 0.0,
             track_length: 0.0,
             max_gears: 7.0,
+            last_susp_travel: None,
+            last_susp_time: None,
         }
     }
 }
@@ -239,7 +246,7 @@ impl GameAdapter for KunosAdapter {
         self.physics.is_some()
     }
 
-    fn read(&mut self) -> Option<CodemastersPacket> {
+    fn read(&mut self) -> Option<(CodemastersPacket, BridgeExtension)> {
         let physics_shm = self.physics.as_ref()?;
         let graphics_shm = self.graphics.as_ref()?;
 
@@ -251,6 +258,30 @@ impl GameAdapter for KunosAdapter {
             return None;
         }
         self.last_packet_id = p.packet_id;
+
+        // --- Tactile extension (ACC's native haptic signals) ---
+        let now = Instant::now();
+        let cur_travel = p.suspension_travel;
+        let avg_susp_vel = match (self.last_susp_travel, self.last_susp_time) {
+            (Some(prev), Some(t_prev)) => {
+                let dt = now.duration_since(t_prev).as_secs_f32().max(1e-4);
+                let mean: f32 = (0..4)
+                    .map(|i| ((cur_travel[i] - prev[i]) / dt).abs())
+                    .sum::<f32>() / 4.0;
+                mean
+            }
+            _ => 0.0,
+        };
+        self.last_susp_travel = Some(cur_travel);
+        self.last_susp_time = Some(now);
+
+        let ext = BridgeExtension {
+            road_vibration: p.kerb_vibration.clamp(0.0, 1.0),
+            slip_vibration: p.slip_vibrations.clamp(0.0, 1.0),
+            g_vibration: p.g_vibrations.clamp(0.0, 1.0),
+            abs_vibration: p.abs_vibrations.clamp(0.0, 1.0),
+            avg_susp_vel,
+        };
 
         // Re-read static data periodically (session changes)
         if let Some(ref shm) = self.statics {
@@ -350,7 +381,7 @@ impl GameAdapter for KunosAdapter {
         pkt.traction_control = p.tc;
         pkt.anti_lock_brakes = p.abs;
 
-        Some(pkt)
+        Some((pkt, ext))
     }
 
     fn disconnect(&mut self) {
@@ -358,5 +389,7 @@ impl GameAdapter for KunosAdapter {
         self.graphics = None;
         self.statics = None;
         self.last_packet_id = -1;
+        self.last_susp_travel = None;
+        self.last_susp_time = None;
     }
 }

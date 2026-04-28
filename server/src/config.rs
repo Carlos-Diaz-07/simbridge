@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 /// Runtime-adjustable settings, shared between admin UI and audio engine.
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct AudioConfig {
     pub enabled: bool,
     pub master_volume: f32,   // 0.0-1.0
@@ -14,6 +15,14 @@ pub struct AudioConfig {
     pub landing_freq: f32,
     pub impact_volume: f32,
     pub impact_freq: f32,
+    /// Continuous road-texture rumble (kerb_vibration / suspension velocity).
+    pub road_volume: f32,
+    pub road_freq: f32,
+    /// Continuous cornering-load rumble (g_vibration / lateral-longitudinal G).
+    pub g_volume: f32,
+    pub g_freq: f32,
+    /// Engine rumble — frequency tracks RPM, amplitude tracks throttle × RPM.
+    pub engine_volume: f32,
     pub device_name: Option<String>,
 }
 
@@ -31,6 +40,11 @@ impl Default for AudioConfig {
             landing_freq: 45.0,
             impact_volume: 0.7,
             impact_freq: 35.0,
+            road_volume: 0.5,
+            road_freq: 60.0,
+            g_volume: 0.4,
+            g_freq: 35.0,
+            engine_volume: 0.4,
             device_name: None,
         }
     }
@@ -66,6 +80,7 @@ impl Default for ServerStatus {
 
 /// Dashboard mode selection — shared between admin panel and dash page.
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct DashConfig {
     pub mode: String, // "circuit" or "rally"
 }
@@ -74,6 +89,15 @@ impl Default for DashConfig {
     fn default() -> Self {
         DashConfig { mode: "circuit".into() }
     }
+}
+
+/// Top-level persisted config — written to ~/.config/simbridge/config.json
+/// on every change so device + dashboard mode + slider tuning survive restarts.
+#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct PersistedConfig {
+    pub audio: AudioConfig,
+    pub dash: DashConfig,
 }
 
 pub type SharedAudioConfig = Arc<Mutex<AudioConfig>>;

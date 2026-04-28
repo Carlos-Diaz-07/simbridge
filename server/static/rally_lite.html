@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -15,29 +15,31 @@ body {
 }
 
 .dash {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
   height: 100vh;
   padding: 4px;
-  gap: 3px;
 }
 
 /* === TOP ROW: RPM + SPEED === */
 .top-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: -webkit-flex;
+  display: flex;
   gap: 3px;
+  margin-bottom: 3px;
 }
 .top-cell {
+  -webkit-flex: 1;
+  flex: 1;
   background: #141418;
   border: 1px solid #252530;
   border-radius: 4px;
   padding: 4px 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  text-align: center;
 }
+.top-cell + .top-cell { margin-left: 3px; }
 .top-label {
   font-size: 9px;
   color: #9ca3af;
@@ -45,67 +47,81 @@ body {
   letter-spacing: 1.5px;
 }
 .top-val {
-  font-size: clamp(22px, 6vw, 36px);
+  font-size: 32px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   color: #e8e8ec;
 }
 
 /* === RPM BAR === */
 .rpm-strip {
+  display: -webkit-flex;
   display: flex;
-  gap: 1px;
   height: 10px;
   padding: 0 1px;
+  margin-bottom: 3px;
 }
 .rpm-s {
+  -webkit-flex: 1;
   flex: 1;
   background: #1a1a20;
   border-radius: 1px;
+  margin-right: 1px;
 }
+.rpm-s:last-child { margin-right: 0; }
 .rpm-s.g { background: #22c55e; }
 .rpm-s.y { background: #eab308; }
 .rpm-s.r { background: #ef4444; }
-.rpm-s.blink { animation: bl 80ms infinite; }
+.rpm-s.blink { -webkit-animation: bl 80ms infinite; animation: bl 80ms infinite; }
+@-webkit-keyframes bl { 50% { opacity: 0.2; } }
 @keyframes bl { 50% { opacity: 0.2; } }
 
 /* === GEAR CENTER === */
 .gear-area {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex: 1;
+  flex: 1;
   gap: 3px;
-  align-items: center;
+  -webkit-align-items: stretch;
+  align-items: stretch;
+  margin-bottom: 3px;
+  min-height: 0;
 }
 
 .gear-box {
+  -webkit-flex: 1;
+  flex: 1;
+  display: -webkit-flex;
   display: flex;
+  -webkit-align-items: center;
   align-items: center;
+  -webkit-justify-content: center;
   justify-content: center;
-  position: relative;
   border-radius: 8px;
   overflow: hidden;
-  min-height: 100px;
-  transition: background-color 150ms;
   background: #141418;
+  -webkit-transition: background-color 150ms;
+  transition: background-color 150ms;
 }
 
 .gear-num {
-  position: relative;
-  z-index: 1;
-  font-size: clamp(120px, 30vw, 200px);
+  font-size: 160px;
   font-weight: 900;
   line-height: 1;
   color: #fff;
   text-shadow: 0 2px 20px rgba(0,0,0,0.8);
 }
-.gear-num.gear-r { color: #ef4444; }
-/* No grey for neutral — stays white */
+.gear-r { color: #ef4444; }
 
 /* Side panels */
 .side-panel {
+  display: -webkit-flex;
   display: flex;
+  -webkit-flex-direction: column;
   flex-direction: column;
   gap: 3px;
+  width: 72px;
+  min-width: 72px;
 }
 .side-cell {
   background: #141418;
@@ -113,6 +129,14 @@ body {
   border-radius: 4px;
   padding: 6px 8px;
   text-align: center;
+  -webkit-flex: 1;
+  flex: 1;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-justify-content: center;
+  justify-content: center;
 }
 .side-label {
   font-size: 8px;
@@ -123,14 +147,14 @@ body {
 .side-val {
   font-size: 16px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Flat tyre indicator */
 .tyre-status {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
 }
 .tyre-indicator {
   font-size: 11px;
@@ -138,20 +162,22 @@ body {
   padding: 2px 0;
   text-align: center;
   border-radius: 2px;
+  width: 50%;
 }
 .tyre-ok { color: #22c55e; }
 .tyre-na { color: #444; }
-.tyre-flat { color: #fff; background: #ef4444; animation: flat-blink 500ms infinite; }
-@keyframes flat-blink {
-  50% { opacity: 0.4; }
-}
+.tyre-flat { color: #fff; background: #ef4444; -webkit-animation: flat-blink 500ms infinite; animation: flat-blink 500ms infinite; }
+@-webkit-keyframes flat-blink { 50% { opacity: 0.4; } }
+@keyframes flat-blink { 50% { opacity: 0.4; } }
 
 /* === STAGE INFO ROW === */
 .stage-row {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: -webkit-flex;
+  display: flex;
   gap: 3px;
-  align-items: center;
+  -webkit-align-items: stretch;
+  align-items: stretch;
+  margin-bottom: 3px;
 }
 .stage-time-box {
   background: #141418;
@@ -167,19 +193,23 @@ body {
   letter-spacing: 1px;
 }
 .stage-time {
-  font-size: clamp(18px, 4vw, 28px);
+  font-size: 24px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   color: #e8e8ec;
 }
 
 .info-cell {
+  -webkit-flex: 1;
+  flex: 1;
   background: #141418;
   border: 1px solid #252530;
   border-radius: 4px;
   padding: 4px 10px;
+  display: -webkit-flex;
   display: flex;
+  -webkit-justify-content: space-between;
   justify-content: space-between;
+  -webkit-align-items: center;
   align-items: center;
 }
 .info-label {
@@ -190,7 +220,6 @@ body {
 .info-val {
   font-size: 14px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* === PROGRESS BAR === */
@@ -199,9 +228,10 @@ body {
   border: 1px solid #252530;
   border-radius: 4px;
   padding: 4px 8px;
+  display: -webkit-flex;
   display: flex;
+  -webkit-align-items: center;
   align-items: center;
-  gap: 8px;
 }
 .progress-label {
   font-size: 9px;
@@ -209,8 +239,10 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   white-space: nowrap;
+  margin-right: 8px;
 }
 .progress-track {
+  -webkit-flex: 1;
   flex: 1;
   height: 6px;
   background: #1a1a20;
@@ -219,17 +251,20 @@ body {
 }
 .progress-fill {
   height: 100%;
+  background: -webkit-linear-gradient(left, #3b82f6, #22c55e);
   background: linear-gradient(90deg, #3b82f6, #22c55e);
   border-radius: 3px;
+  width: 0%;
+  -webkit-transition: width 200ms;
   transition: width 200ms;
 }
 .progress-pct {
   font-size: 11px;
   font-weight: 600;
   color: #b0b0b0;
-  font-variant-numeric: tabular-nums;
   min-width: 50px;
   text-align: right;
+  margin-left: 8px;
 }
 
 .status {
@@ -239,7 +274,7 @@ body {
   font-size: 9px;
   color: #333;
 }
-.status.live { color: #22c55e; }
+.status-live { color: #22c55e; }
 
 .fs-btn {
   position: fixed;
@@ -300,7 +335,7 @@ body {
       <span class="gear-num" id="gear">N</span>
     </div>
 
-    <!-- Right: tyre flat indicator + position -->
+    <!-- Right: tyre flat indicator -->
     <div class="side-panel">
       <div class="side-cell">
         <div class="side-label">Tyres</div>
@@ -334,7 +369,7 @@ body {
   <div class="progress-wrap">
     <span class="progress-label">Stage</span>
     <div class="progress-track">
-      <div class="progress-fill" id="progress" style="width:0%"></div>
+      <div class="progress-fill" id="progress"></div>
     </div>
     <span class="progress-pct" id="progress-pct">-- / -- km</span>
   </div>
@@ -344,154 +379,163 @@ body {
 <div class="fs-btn" id="fs-btn" title="Fullscreen">&#x26F6;</div>
 
 <script>
-const $ = id => document.getElementById(id);
-const NUM_SEGS = 50;
+var NUM_SEGS = 50;
+
+function g(id) { return document.getElementById(id); }
 
 // Build RPM strip
 (function() {
-  const strip = $('rpm-strip');
-  for (let i = 0; i < NUM_SEGS; i++) {
-    const s = document.createElement('div');
-    s.className = 'rpm-s';
+  var strip = g("rpm-strip");
+  for (var i = 0; i < NUM_SEGS; i++) {
+    var s = document.createElement("div");
+    s.className = "rpm-s";
     strip.appendChild(s);
   }
 })();
 
 function formatTime(s) {
-  if (s <= 0) return '0:00.00';
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return m + ':' + sec.toFixed(2).padStart(5, '0');
+  if (s <= 0) return "0:00.00";
+  var m = Math.floor(s / 60);
+  var sec = s % 60;
+  var str = sec.toFixed(2);
+  if (str.length < 5) str = "0" + str;
+  return m + ":" + str;
 }
 
-// Gear background color based on RPM percentage
-// One solid color at a time, not bands
 function gearBgColor(rpmPct) {
-  if (rpmPct >= 0.93) return '#7f1d1d'; // deep red — past optimal, hit limiter soon
-  if (rpmPct >= 0.85) return '#991b1b'; // red — shift NOW
-  if (rpmPct >= 0.75) return '#78350f'; // orange — approaching shift point
-  if (rpmPct >= 0.60) return '#14532d'; // green — in the power band, good to shift
-  return '#141418'; // neutral dark — below shift range
+  if (rpmPct >= 0.93) return "#7f1d1d";
+  if (rpmPct >= 0.85) return "#991b1b";
+  if (rpmPct >= 0.75) return "#78350f";
+  if (rpmPct >= 0.60) return "#14532d";
+  return "#141418";
 }
 
-// Flat tyre detection. We don't know the source unit (DR2 native UDP often
-// doesn't populate this field at all; ACC sends PSI; some setups use bar or
-// kPa). Pure relative test, no absolute thresholds:
-//   1. If no tyre has a non-zero reading, the game isn't reporting
-//      pressure → show neutral "—" indicators.
-//   2. A tyre is flat if its pressure is below half the median of the
-//      other three. Works for PSI/bar/kPa equally — only the ratio
-//      matters. Limitation: can't detect a uniform 4-tyre deflation,
-//      but that scenario doesn't occur in normal racing.
-
-function connect() {
-  const ws = new WebSocket('ws://' + location.host + '/ws');
-  ws.onmessage = (e) => {
-    const d = JSON.parse(e.data);
-    if (!d.connected) {
-      $('status').className = 'status';
-      $('status').textContent = 'no signal';
+function poll() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/api/telemetry", true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status !== 200) {
+      g("status").innerHTML = "error";
+      g("status").className = "status";
       return;
     }
-    $('status').className = 'status live';
-    $('status').textContent = 'live';
+
+    var d;
+    try { d = JSON.parse(xhr.responseText); } catch(e) { return; }
+
+    if (!d.connected) {
+      g("status").innerHTML = "no signal";
+      g("status").className = "status";
+      return;
+    }
+    g("status").innerHTML = "live";
+    g("status").className = "status status-live";
 
     // RPM
-    $('rpm').textContent = Math.round(d.rpm);
+    g("rpm").innerHTML = Math.round(d.rpm);
 
     // Speed
-    $('speed').textContent = Math.round(d.speed_kmh);
+    g("speed").innerHTML = Math.round(d.speed_kmh);
 
-    // RPM bar (segmented, left to right as normal)
-    const rpmPct = d.max_rpm > 0 ? d.rpm / d.max_rpm : 0;
-    const litCount = Math.round(rpmPct * NUM_SEGS);
-    const segs = $('rpm-strip').children;
-    for (let i = 0; i < NUM_SEGS; i++) {
-      const p = i / NUM_SEGS;
+    // RPM bar (segmented)
+    var rpmPct = d.max_rpm > 0 ? d.rpm / d.max_rpm : 0;
+    var litCount = Math.round(rpmPct * NUM_SEGS);
+    var segs = g("rpm-strip").children;
+    for (var i = 0; i < NUM_SEGS; i++) {
+      var p = i / NUM_SEGS;
       if (i < litCount) {
-        if (p > 0.85) segs[i].className = rpmPct > 0.95 ? 'rpm-s blink r' : 'rpm-s r';
-        else if (p > 0.7) segs[i].className = 'rpm-s y';
-        else segs[i].className = 'rpm-s g';
+        if (p > 0.85) segs[i].className = rpmPct > 0.95 ? "rpm-s blink r" : "rpm-s r";
+        else if (p > 0.7) segs[i].className = "rpm-s y";
+        else segs[i].className = "rpm-s g";
       } else {
-        segs[i].className = 'rpm-s';
+        segs[i].className = "rpm-s";
       }
     }
 
-    // Gear — solid background color based on RPM
-    $('gear-box').style.backgroundColor = gearBgColor(rpmPct);
+    // Gear background
+    g("gear-box").style.backgroundColor = gearBgColor(rpmPct);
 
-    // Gear number — always white (red only for reverse)
-    const g = $('gear');
-    g.textContent = d.gear;
-    g.className = 'gear-num' + (d.gear === 'R' ? ' gear-r' : '');
+    // Gear number
+    var gEl = g("gear");
+    gEl.innerHTML = d.gear;
+    gEl.className = "gear-num" + (d.gear === "R" ? " gear-r" : "");
 
     // Stage time
-    $('stagetime').textContent = formatTime(d.lap_time);
+    g("stagetime").innerHTML = formatTime(d.lap_time);
 
     // Fuel
-    $('fuel').textContent = d.fuel > 0 ? d.fuel.toFixed(1) + 'L' : '--';
+    g("fuel").innerHTML = d.fuel > 0 ? d.fuel.toFixed(1) + "L" : "--";
 
     // TC/ABS
-    $('tc').textContent = d.tc > 0 ? d.tc.toFixed(0) : '0';
-    $('abs').textContent = d.abs > 0 ? d.abs.toFixed(0) : '0';
+    g("tc").innerHTML = d.tc > 0 ? d.tc.toFixed(0) : "0";
+    g("abs").innerHTML = d.abs > 0 ? d.abs.toFixed(0) : "0";
 
-    // Flat tyre indicators
-    const corners = ['fl','fr','rl','rr'];
-    const pressures = d.tyre_pressure || [0,0,0,0];
-    const anyReported = pressures.some(p => p > 0);
-    for (let i = 0; i < 4; i++) {
-      const p = pressures[i];
-      const el = $('ty-' + corners[i]);
+    // Flat tyre indicators — pure relative test, see rally.html for rationale.
+    // Neutral "—" when game doesn't populate; flat when < 50% of others' median.
+    var corners = ["fl","fr","rl","rr"];
+    var pressures = d.tyre_pressure || [0,0,0,0];
+    var anyReported = false;
+    for (var k = 0; k < 4; k++) { if (pressures[k] > 0) { anyReported = true; break; } }
+    for (var j = 0; j < 4; j++) {
+      var pr = pressures[j];
+      var el = g("ty-" + corners[j]);
       if (!anyReported) {
-        // Game doesn't report pressure (DR2 native, etc.) — show neutral.
-        el.className = 'tyre-indicator tyre-na';
-        el.textContent = corners[i].toUpperCase();
+        el.className = "tyre-indicator tyre-na";
+        el.innerHTML = corners[j].toUpperCase();
         continue;
       }
-      // Median of the other three (ignoring this corner).
-      const others = pressures.filter((_, k) => k !== i).filter(v => v > 0).sort((a,b) => a-b);
-      const med = others.length === 3 ? others[1]
-        : others.length === 2 ? (others[0]+others[1])/2
-        : others[0] || 0;
-      const isFlat = med > 0 && p < med * 0.5;
+      var others = [];
+      for (var m = 0; m < 4; m++) {
+        if (m !== j && pressures[m] > 0) { others.push(pressures[m]); }
+      }
+      others.sort(function(a, b) { return a - b; });
+      var med = 0;
+      if (others.length === 3) { med = others[1]; }
+      else if (others.length === 2) { med = (others[0] + others[1]) / 2; }
+      else if (others.length === 1) { med = others[0]; }
+      var isFlat = med > 0 && pr < med * 0.5;
       if (isFlat) {
-        el.className = 'tyre-indicator tyre-flat';
-        el.textContent = corners[i].toUpperCase() + ' FLAT';
+        el.className = "tyre-indicator tyre-flat";
+        el.innerHTML = corners[j].toUpperCase() + " FLAT";
       } else {
-        el.className = 'tyre-indicator tyre-ok';
-        el.textContent = corners[i].toUpperCase();
+        el.className = "tyre-indicator tyre-ok";
+        el.innerHTML = corners[j].toUpperCase();
       }
     }
 
-    // Distance into stage (lap_distance from telemetry, convert m to km)
-    const distKm = d.lap_time > 0 ? (d.speed_kmh * d.lap_time / 3600) : 0;
-    $('distance').textContent = distKm > 0 ? distKm.toFixed(1) + ' km' : '-- km';
+    // Distance
+    var distKm = d.lap_time > 0 ? (d.speed_kmh * d.lap_time / 3600) : 0;
+    g("distance").innerHTML = distKm > 0 ? distKm.toFixed(1) + " km" : "-- km";
 
-    // Stage length (track_size not available yet, show --)
-    $('stage-len').textContent = '-- km';
+    // Stage length
+    g("stage-len").innerHTML = "-- km";
 
     // Progress bar
-    $('progress').style.width = '0%';
-    $('progress-pct').textContent = distKm > 0 ? distKm.toFixed(1) + ' km' : '-- / -- km';
+    g("progress").style.width = "0%";
+    g("progress-pct").innerHTML = distKm > 0 ? distKm.toFixed(1) + " km" : "-- / -- km";
   };
-
-  ws.onclose = () => {
-    $('status').className = 'status';
-    $('status').textContent = 'reconnecting';
-    setTimeout(connect, 2000);
-  };
-  ws.onerror = () => ws.close();
+  xhr.send();
 }
 
-connect();
+// Poll at ~5Hz
+setInterval(poll, 200);
+poll();
 
-$('fs-btn').onclick = function() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-};
+// Fullscreen
+var fsBtn = g("fs-btn");
+if (fsBtn) {
+  fsBtn.onclick = function() {
+    var el = document.documentElement;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  };
+}
 </script>
 </body>
 </html>
